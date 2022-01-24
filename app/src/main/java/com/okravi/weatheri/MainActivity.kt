@@ -70,6 +70,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun getLocationWeatherDetails(){
+        if(Constants.isNetworkAvailable(this)){
+            Toast.makeText(this, "we've got a connection", Toast.LENGTH_SHORT).show()
+        }else{
+            Toast.makeText(this, "no internet connection", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun showRationaleDialogForPermissions() {
         AlertDialog.Builder(this)
             .setMessage("It looks like the permissions weren't granted. That's unfortunate.")
@@ -130,6 +138,8 @@ class MainActivity : AppCompatActivity() {
 
             val mLatitude = mLastLocation!!.latitude
             val mLongitude = mLastLocation!!.longitude
+
+            getLocationWeatherDetails()
         }
     }
 }
