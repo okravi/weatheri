@@ -19,11 +19,19 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
+
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
+import com.okravi.weatheri.models.Weather
+import com.okravi.weatheri.models.WeatherResponse
+import com.okravi.weatheri.network.WeatherService
+
+import retrofit2.*
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : AppCompatActivity() {
 
@@ -70,13 +78,42 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getLocationWeatherDetails(){
+    private fun getLocationWeatherDetails(latitude:Double, longitude: Double){
         if(Constants.isNetworkAvailable(this)){
-            Toast.makeText(this, "we've got a connection", Toast.LENGTH_SHORT).show()
+
+            val retrofit: Retrofit = Retrofit.Builder()
+                .baseUrl(Constants.BASE_URL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+
+            val service: WeatherService = retrofit
+                .create<WeatherService>(WeatherService::class.java)
+
+            val listCall: Call<WeatherResponse> = service.getWeather(
+                latitude, longitude, Constants.METRIC_UNIT, Constants.APP_ID
+            )
+
+            listCall.enqueue(object: Callback<WeatherResponse>{
+                override fun onResponse(
+                    call: Call<WeatherResponse>,
+                    response: Response<WeatherResponse>
+                ) {
+                   if (response.isSuccessful){
+                       val weatherList: WeatherResponse? = response.body()
+                   }
+                }
+
+                override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
+                    TODO("Not yet implemented")
+                }
+
+            })
+
         }else{
             Toast.makeText(this, "no internet connection", Toast.LENGTH_SHORT).show()
         }
     }
+
 
     private fun showRationaleDialogForPermissions() {
         AlertDialog.Builder(this)
@@ -112,18 +149,7 @@ class MainActivity : AppCompatActivity() {
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         //Initialize locationRequest.
         val mLocationRequest = com.google.android.gms.location.LocationRequest().apply {
-            // Sets the desired interval for
-            // active location updates.
-            /*
-            interval = 60000
 
-            // Sets the fastest rate for active location updates.
-            fastestInterval = 2000
-
-            // Sets the maximum time when batched location
-            // updates are delivered.
-            maxWaitTime = 500
-            */
             priority = com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
         }
         mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallBack,
@@ -139,7 +165,7 @@ class MainActivity : AppCompatActivity() {
             val mLatitude = mLastLocation!!.latitude
             val mLongitude = mLastLocation!!.longitude
 
-            getLocationWeatherDetails()
+            getLocationWeatherDetails(mLatitude, mLongitude)
         }
     }
 }
