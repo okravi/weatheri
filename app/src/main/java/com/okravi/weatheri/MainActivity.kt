@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -100,11 +101,15 @@ class MainActivity : AppCompatActivity() {
                 ) {
                    if (response.isSuccessful){
                        val weatherList: WeatherResponse? = response.body()
+                       Log.i("Response result", "$weatherList")
+                   }else{
+                       val rc = response.code()
+                       Log.i("Response not successful", "$rc")
                    }
                 }
 
                 override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
-                    TODO("Not yet implemented")
+                    Log.i("Fetch error", t!!.message.toString())
                 }
 
             })
