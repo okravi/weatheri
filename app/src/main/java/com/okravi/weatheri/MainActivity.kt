@@ -2,41 +2,38 @@ package com.okravi.weatheri
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Dialog
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
-import android.location.LocationRequest
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
-
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
-import com.okravi.weatheri.models.Weather
 import com.okravi.weatheri.models.WeatherResponse
 import com.okravi.weatheri.network.WeatherService
-
 import retrofit2.*
-import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var mFusedLocationClient : FusedLocationProviderClient
+    private var mProgressDialog: Dialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,12 +91,15 @@ class MainActivity : AppCompatActivity() {
                 latitude, longitude, Constants.METRIC_UNIT, Constants.APP_ID
             )
 
+            showCustomProgressDialog()
+
             listCall.enqueue(object: Callback<WeatherResponse>{
                 override fun onResponse(
                     call: Call<WeatherResponse>,
                     response: Response<WeatherResponse>
                 ) {
                    if (response.isSuccessful){
+                       hideProgressDialog()
                        val weatherList: WeatherResponse? = response.body()
                        Log.i("Response result", "$weatherList")
                    }else{
@@ -109,7 +109,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
-                    Log.i("Fetch error", t!!.message.toString())
+                    hideProgressDialog()
+                    Log.i("Fetch error", t.message.toString())
                 }
 
             })
@@ -167,10 +168,22 @@ class MainActivity : AppCompatActivity() {
         override fun onLocationResult(locationResult: LocationResult){
             val mLastLocation: Location = locationResult.lastLocation
 
-            val mLatitude = mLastLocation!!.latitude
-            val mLongitude = mLastLocation!!.longitude
+            val mLatitude = mLastLocation.latitude
+            val mLongitude = mLastLocation.longitude
 
             getLocationWeatherDetails(mLatitude, mLongitude)
+        }
+    }
+
+    private fun showCustomProgressDialog(){
+        mProgressDialog = Dialog(this)
+        mProgressDialog!!.setContentView(R.layout.dialog_custom_progress)
+        mProgressDialog!!.show()
+    }
+
+    private fun hideProgressDialog(){
+        if (mProgressDialog != null){
+            mProgressDialog!!.dismiss()
         }
     }
 }
