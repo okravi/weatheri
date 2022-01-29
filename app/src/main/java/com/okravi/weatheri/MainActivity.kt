@@ -9,19 +9,16 @@ import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.*
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
@@ -41,6 +38,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mFusedLocationClient : FusedLocationProviderClient
     private var mProgressDialog: Dialog? = null
+
+    //making coords accessible for refresh feature
+    private var mLatitude: Double = 0.0
+    private var mLongitude: Double = 0.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,7 +85,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getLocationWeatherDetails(latitude:Double, longitude: Double){
+    private fun getLocationWeatherDetails(){
+
         if(Constants.isNetworkAvailable(this)){
 
             val retrofit: Retrofit = Retrofit.Builder()
@@ -96,7 +98,7 @@ class MainActivity : AppCompatActivity() {
                 .create<WeatherService>(WeatherService::class.java)
 
             val listCall: Call<WeatherResponse> = service.getWeather(
-                latitude, longitude, Constants.METRIC_UNIT, Constants.APP_ID
+                mLatitude, mLongitude, Constants.METRIC_UNIT, Constants.APP_ID
             )
 
             showCustomProgressDialog()
@@ -161,10 +163,13 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     private fun requestLocationData(){
         //Initialize fusedLocationProviderClient
+        Log.d("weather", "getting new location")
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         //Initialize locationRequest.
         val mLocationRequest = com.google.android.gms.location.LocationRequest().apply {
-
+            //interval = 100
+            //maxWaitTime = 5000
+            numUpdates = 1
             priority = com.google.android.gms.location.LocationRequest.PRIORITY_HIGH_ACCURACY
         }
         mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallBack,
@@ -172,15 +177,18 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+
+
     private val mLocationCallBack = object : LocationCallback(){
 
         override fun onLocationResult(locationResult: LocationResult){
+            Log.d("weather", "got new location")
             val mLastLocation: Location = locationResult.lastLocation
 
-            val mLatitude = mLastLocation.latitude
-            val mLongitude = mLastLocation.longitude
+            mLatitude = mLastLocation.latitude
+            mLongitude = mLastLocation.longitude
 
-            getLocationWeatherDetails(mLatitude, mLongitude)
+            getLocationWeatherDetails()
         }
     }
 
@@ -193,6 +201,22 @@ class MainActivity : AppCompatActivity() {
     private fun hideProgressDialog(){
         if (mProgressDialog != null){
             mProgressDialog!!.dismiss()
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu, menu)
+        return super.onCreateOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_refresh -> {
+                Log.d("weather", "refresh button clicked")
+                requestLocationData()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 
