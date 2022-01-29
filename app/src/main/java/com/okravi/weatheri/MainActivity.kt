@@ -9,11 +9,13 @@ import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -25,10 +27,15 @@ import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
+import com.okravi.weatheri.databinding.ActivityMainBinding
 import com.okravi.weatheri.models.WeatherResponse
 import com.okravi.weatheri.network.WeatherService
 import retrofit2.*
 import retrofit2.converter.gson.GsonConverterFactory
+import java.text.SimpleDateFormat
+import java.util.*
+
+private var binding : ActivityMainBinding? = null
 
 class MainActivity : AppCompatActivity() {
 
@@ -37,7 +44,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding?.root)
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -101,6 +109,7 @@ class MainActivity : AppCompatActivity() {
                    if (response.isSuccessful){
                        hideProgressDialog()
                        val weatherList: WeatherResponse? = response.body()
+                       setupUI(weatherList!!)
                        Log.i("Response result", "$weatherList")
                    }else{
                        val rc = response.code()
@@ -185,5 +194,52 @@ class MainActivity : AppCompatActivity() {
         if (mProgressDialog != null){
             mProgressDialog!!.dismiss()
         }
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun setupUI(weatherList: WeatherResponse){
+        for (i in weatherList.weather.indices){
+            Log.i("Weather name", weatherList.weather.toString())
+
+            binding?.tvMain?.text = weatherList.weather[i].main
+            binding?.tvMainDescription?.text = weatherList.weather[i].description
+            binding?.tvTemp?.text = weatherList.main.temp.toString() +
+                    getUnit(application.resources.configuration.locales.toString())
+            binding?.tvSunriseTime?.text = unixTime(weatherList.sys.sunrise)
+            binding?.tvSunsetTime?.text = unixTime(weatherList.sys.sunset)
+            binding?.tvMin?.text = weatherList.main.temp_min.toString() +
+                    getUnit(application.resources.configuration.locales.toString()) +" min"
+            binding?.tvMax?.text = weatherList.main.temp_max.toString() +
+                    getUnit(application.resources.configuration.locales.toString()) +" max"
+            binding?.tvSpeed?.text = weatherList.wind.speed.toString()
+            binding?.tvName?.text = weatherList.name
+            binding?.tvCountry?.text = weatherList.sys.country
+            binding?.tvHumidity?.text = weatherList.main.humidity.toString() + "%"
+
+
+
+
+        }
+    }
+
+    private fun getUnit(value: String): String {
+        var value = "°C"
+        if ("US" == value || "LR" == value || "MM" == value) {
+            value = "°F"
+        }
+        return value
+    }
+
+    @SuppressLint("SimpleDateFormat")
+    private fun unixTime(timex: Long): String? {
+        val date = Date(timex * 1000L)
+         val sdf = SimpleDateFormat("HH:mm", Locale.UK)
+        sdf.timeZone = TimeZone.getDefault()
+        return sdf.format(date)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        binding = null
     }
 }
